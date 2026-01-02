@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Modern Library Management System - A stunning web interface for managing library operations">
+  <meta name="author" content="LibraryHub">
+  <title>LibraryHub - Modern Library Management</title>
+
+  <!-- CSS Files -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layouts.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+  <!-- App Container -->
+  <div id="app" class="app">
+    <!-- Navigation (Hidden on login page) -->
+    <nav id="navbar" class="navbar" style="display: none;">
+      <div class="navbar-container">
+        <div class="navbar-brand">
+          <span>📚</span>
+          <span>LibraryHub</span>
+        </div>
+
+        <div class="navbar-menu" id="navMenu">
+          <!-- Navigation links will be injected by JS -->
+        </div>
+
+        <div class="navbar-actions">
+          <button class="btn-ghost" id="themeToggle" title="Toggle Theme">
+            <span id="themeIcon">🌙</span>
+          </button>
+          <div class="user-menu">
+            <div class="user-avatar" id="userAvatar" title="Profile">
+              <span id="userInitials">??</span>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="mainContent" class="main-content">
+      <!-- Dynamic content will be loaded here -->
+    </main>
+  </div>
+
+  <!-- JavaScript Files -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/mockData.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/router.js"></script>
+
+  <!-- Main Application Script -->
+  <script>
+    // ============================================
+    // Main Application
+    // ============================================
+
+    const App = {
+      init() {
+        // Initialize state
+        State.init();
+
+        // Setup event listeners
+        this.setupEventListeners();
+
+        // Register routes
+        this.registerRoutes();
+
+        // Initialize router
+        Router.init();
+      },
+
+      setupEventListeners() {
+        // Theme toggle
+        document.getElementById('themeToggle')?.addEventListener('click', () => {
+          State.toggleTheme();
+          this.updateThemeIcon();
+        });
+
+        // Logout
+        document.getElementById('logoutBtn')?.addEventListener('click', () => {
+          State.clearUser();
+          Router.navigate('login');
+        });
+
+        // Subscribe to state changes
+        State.subscribe('userChanged', (user) => {
+          if (user) {
+            this.updateUserDisplay(user);
+            document.getElementById('navbar').style.display = 'block';
+          } else {
+            document.getElementById('navbar').style.display = 'none';
+          }
+        });
+      },
+
+      updateThemeIcon() {
+        const icon = document.getElementById('themeIcon');
+        icon.textContent = State.theme === 'light' ? '🌙' : '☀️';
+      },
+
+      updateUserDisplay(user) {
+        const initials = Utils.getInitials(user.name);
+        document.getElementById('userInitials').textContent = initials;
+        document.getElementById('userAvatar').title = user.name;
+
+        // Update navigation based on role
+        this.updateNavigation(user.role);
+      },
+
+      updateNavigation(role) {
+        const navMenu = document.getElementById('navMenu');
+        let links = [
+          { path: 'dashboard', label: 'Dashboard', icon: '🏠' },
+          { path: 'browse', label: 'Browse', icon: '📖' },
+          { path: 'transactions', label: 'My Books', icon: '📚' },
+          { path: 'profile', label: 'Profile', icon: '👤' }
+        ];
+
+        if (role === 'Librarian') {
+          links.push({ path: 'admin', label: 'Admin', icon: '⚙️' });
+        }
+
+        navMenu.innerHTML = links.map(link => `
+          <a href="#${link.path}" class="nav-link" data-route="${link.path}">
+            <span>${link.icon}</span> ${link.label}
+          </a>
+        `).join('');
+      },
+
+      registerRoutes() {
+        // Login Page
+        Router.register('login', () => this.renderLoginPage());
+
+        // Dashboard
+        Router.register('dashboard', () => this.renderDashboardPage());
+
+        // Browse Items
+        Router.register('browse', () => this.renderBrowsePage());
+
+        // Transactions
+        Router.register('transactions', () => this.renderTransactionsPage());
+
+        // Profile
+        Router.register('profile', () => this.renderProfilePage());
+
+        // Admin (Librarian only)
+        Router.register('admin', () => this.renderAdminPage());
+      },
+
+      // ===== PAGE RENDERERS =====
+
+      renderLoginPage() {
+        const content = document.getElementById('mainContent');
+        content.innerHTML = `
+          <div class="hero">
+            <div class="hero-content animate-fadeInUp">
+              <h1 class="hero-title">LibraryHub</h1>
+              <p class="hero-subtitle">Modern Library Management System</p>
+              
+              <div class="card card-glass" style="max-width: 400px; margin: 0 auto; margin-top: 2rem;">
+                <div class="card-body">
+                  <h3 class="card-title">Welcome Back</h3>
+                  
+                  <form id="loginForm">
+                    <div class="form-group">
+                      <label class="form-label">User ID</label>
+                      <input type="text" id="userId" class="form-input" placeholder="e.g., S001, F001, L001" required>
+                    </div>
+                    
+                    <div class="form-group">
+                      <label class="form-label">Password</label>
+                      <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-full btn-lg">
+                      Sign In
+                    </button>
+                  </form>
+                  
+                  <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border);">
+                    <p class="text-sm text-muted text-center" style="margin-bottom: 0.5rem;">Sample Credentials:</p>
+                    <div style="display: grid; gap: 0.5rem; font-size: 0.875rem;">
+                      <div class="flex items-center justify-between" style="background: var(--color-bg-secondary); padding: 0.5rem; border-radius: var(--radius-base);">
+                        <span>Student:</span>
+                        <code style="background: var(--color-bg-tertiary); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm);">S001 / pass123</code>
+                      </div>
+                      <div class="flex items-center justify-between" style="background: var(--color-bg-secondary); padding: 0.5rem; border-radius: var(--radius-base);">
+                        <span>Faculty:</span>
+                        <code style="background: var(--color-bg-tertiary); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm);">F001 / pass456</code>
+                      </div>
+                      <div class="flex items-center justify-between" style="background: var(--color-bg-secondary); padding: 0.5rem; border-radius: var(--radius-base);">
+                        <span>Librarian:</span>
+                        <code style="background: var(--color-bg-tertiary); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm);">L001 / pass789</code>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Handle login form
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const userId = document.getElementById('userId').value;
+          const password = document.getElementById('password').value;
+
+          try {
+            const result = await API.login(userId, password);
+            State.setUser(result.user);
+            Utils.showToast(`Welcome back, ${result.user.name}!`, 'success');
+            Router.navigate('dashboard');
+          } catch (error) {
+            Utils.showToast(error.message || 'Invalid credentials', 'error');
+          }
+        });
+      },
+
+      renderDashboardPage() {
+        const user = State.currentUser;
+        const stats = State.getStatistics();
+
+        const content = document.getElementById('mainContent');
+        content.innerHTML = `
+          <div class="container animate-fadeInUp">
+            <div class="page-header">
+              <h1 class="page-title">Welcome, ${user.name.split(' ')[0]}! 👋</h1>
+              <p class="page-description">Here's what's happening with your library</p>
+            </div>
+            
+            <div class="dashboard-stats">
+              <div class="stat-card stagger-item">
+                <div class="stat-icon" style="background: var(--color-primary-100); color: var(--color-primary-600);">📚</div>
+                <div class="stat-value">${stats.availableItems}</div>
+                <div class="stat-label">Available Items</div>
+              </div>
+              
+              <div class="stat-card stagger-item">
+                <div class="stat-icon" style="background: var(--color-secondary-100); color: var(--color-secondary-600);">📖</div>
+                <div class="stat-value">${stats.totalBorrowed}</div>
+                <div class="stat-label">Books Borrowed</div>
+              </div>
+              
+              <div class="stat-card stagger-item">
+                <div class="stat-icon" style="background: var(--color-accent-100); color: var(--color-accent-600);">⏱️</div>
+                <div class="stat-value">${CONFIG.MAX_BORROW_LIMIT[user.role] - stats.totalBorrowed}</div>
+                <div class="stat-label">Remaining Limit</div>
+              </div>
+              
+              <div class="stat-card stagger-item">
+                <div class="stat-icon" style="background: var(--color-success-light); color: var(--color-success);">✅</div>
+                <div class="stat-value">${stats.activeTransactions}</div>
+                <div class="stat-label">Active Loans</div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2" style="margin-top: 2rem;">
+              <div class="card stagger-item">
+                <div class="card-header">
+                  <h3 class="card-title">Quick Actions</h3>
+                </div>
+                <div class="card-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                  <a href="#browse" class="btn btn-primary">📖 Browse Library</a>
+                  <a href="#transactions" class="btn btn-secondary">📚 My Borrowed Books</a>
+                  <a href="#profile" class="btn btn-outline">👤 View Profile</a>
+                </div>
+              </div>
+              
+              <div class="card card-gradient stagger-item">
+                <div class="card-header" style="border-color: rgba(255,255,255,0.2);">
+                  <h3 class="card-title">Account Info</h3>
+                </div>
+                <div class="card-body">
+                  <div style="display: grid; gap: 0.75rem;">
+                    <div><strong>Role:</strong> ${user.role}</div>
+                    <div><strong>Email:</strong> ${user.email}</div>
+                    <div><strong>Max Borrow:</strong> ${CONFIG.MAX_BORROW_LIMIT[user.role]} items</div>
+                    <div><strong>Loan Period:</strong> ${CONFIG.BORROW_DURATION[user.role]} days</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      },
+
+      renderBrowsePage() {
+        const items = State.items;
+
+        const content = document.getElementById('mainContent');
+        content.innerHTML = `
+          <div class="container animate-fadeInUp">
+            <div class="page-header">
+              <h1 class="page-title">Browse Library</h1>
+              <p class="page-description">Discover and borrow from our collection</p>
+              
+              <div class="page-actions">
+                <div class="form-group" style="margin: 0; min-width: 300px;">
+                  <input type="text" id="searchInput" class="form-input" placeholder="🔍 Search by title, author, or genre...">
+                </div>
+                
+                <select id="typeFilter" class="form-select" style="max-width: 200px;">
+                  <option value="all">All Types</option>
+                  <option value="Book">📚 Books</option>
+                  <option value="Magazine">📰 Magazines</option>
+                  <option value="Journal">📄 Journals</option>
+                </select>
+              </div>
+            </div>
+            
+            <div id="itemsGrid" class="grid grid-cols-3"></div>
+          </div>
+        `;
+
+        const renderItems = (itemsToRender) => {
+          const grid = document.getElementById('itemsGrid');
+          grid.innerHTML = itemsToRender.map(item => `
+            <div class="card hover-lift stagger-item">
+              <div style="font-size: 3rem; text-align: center; margin-bottom: 1rem;">${item.coverImage || '📚'}</div>
+              <h4 class="card-title" style="font-size: 1.125rem;">${item.title}</h4>
+              <p class="text-sm text-muted">${item.author || item.publisher}</p>
+              <p class="text-sm text-muted">${item.type} • ${item.year}</p>
+              
+              <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                <span class="badge ${item.available ? 'badge-success' : 'badge-error'}">
+                  ${item.available ? '✓ Available' : '✗ Borrowed'}
+                </span>
+                ${item.available ? `<button class="btn btn-sm btn-primary" onclick="App.borrowItem('${item.id}')">Borrow</button>` : ''}
+              </div>
+            </div>
+          `).join('');
+        };
+
+        renderItems(items);
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', Utils.debounce((e) => {
+          const query = e.target.value;
+          const filtered = State.searchItems(query);
+          renderItems(filtered);
+        }, 300));
+
+        // Type filter
+        document.getElementById('typeFilter').addEventListener('change', (e) => {
+          const type = e.target.value;
+          const filtered = State.filterItemsByType(type);
+          renderItems(filtered);
+        });
+      },
+
+      async borrowItem(itemId) {
+        try {
+          const result = await API.borrowItem(State.currentUser.id, itemId);
+          Utils.showToast('Item borrowed successfully!', 'success');
+          Router.navigate('browse'); // Refresh page
+        } catch (error) {
+          Utils.showToast(error.message, 'error');
+        }
+      },
+
+      renderTransactionsPage() {
+        const transactions = State.getUserTransactions(State.currentUser.id);
+
+        const content = document.getElementById('mainContent');
+        content.innerHTML = `
+          <div class="container animate-fadeInUp">
+            <div class="page-header">
+              <h1 class="page-title">My Borrowed Books</h1>
+              <p class="page-description">Track your current and past loans</p>
+            </div>
+            
+            ${transactions.length === 0 ? `
+              <div class="empty-state">
+                <div class="empty-state-icon">📚</div>
+                <h3 class="empty-state-title">No transactions yet</h3>
+                <p class="empty-state-description">Browse the library and borrow your first book!</p>
+                <a href="#browse" class="btn btn-primary">Browse Library</a>
+              </div>
+            ` : `
+              <div class="table-container">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Type</th>
+                      <th>Borrowed</th>
+                      <th>Due Date</th>
+                      <th>Status</th>
+                      <th>Fine</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${transactions.map(t => {
+          const isOverdue = t.status === 'Active' && new Date() > new Date(t.dueDate);
+          const status = isOverdue ? 'Overdue' : t.status;
+          const statusClass = status === 'Overdue' ? 'error' : status === 'Active' ? 'warning' : 'success';
+
+          return `
+                        <tr>
+                          <td><strong>${t.itemTitle}</strong></td>
+                          <td>${t.itemType}</td>
+                          <td>${Utils.formatDate(t.borrowDate)}</td>
+                          <td>${Utils.formatDate(t.dueDate)}</td>
+                          <td><span class="badge badge-${statusClass}">${status}</span></td>
+                          <td>${Utils.formatCurrency(t.fine)}</td>
+                          <td>
+                            ${t.status === 'Active' ?
+              `<button class="btn btn-sm btn-secondary" onclick="App.returnItem('${t.itemId}')">Return</button>` :
+              '-'}
+                          </td>
+                        </tr>
+                      `;
+        }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `}
+          </div>
+        `;
+      },
+
+      async returnItem(itemId) {
+        try {
+          const result = await API.returnItem(State.currentUser.id, itemId);
+          if (result.fine > 0) {
+            Utils.showToast(`Item returned. Fine: ${Utils.formatCurrency(result.fine)}`, 'warning');
+          } else {
+            Utils.showToast('Item returned successfully!', 'success');
+          }
+          Router.navigate('transactions'); // Refresh
+        } catch (error) {
+          Utils.showToast(error.message, 'error');
+        }
+      },
+
+      renderProfilePage() {
+        const user = State.currentUser;
+        const transactions = State.getUserTransactions(user.id);
+        const activeLoans = transactions.filter(t => t.status === 'Active');
+
+        const content = document.getElementById('mainContent');
+        content.innerHTML = `
+          <div class="container animate-fadeInUp">
+            <div class="page-header">
+              <h1 class="page-title">My Profile</h1>
+              <p class="page-description">View and manage your account</p>
+            </div>
+            
+            <div class="grid grid-cols-2">
+              <div class="card card-gradient">
+                <div class="flex items-center gap-4">
+                  <div class="user-avatar" style="width: 80px; height: 80px; font-size: 2rem;">
+                    ${Utils.getInitials(user.name)}
+                  </div>
+                  <div>
+                    <h2 style="font-size: 1.5rem; margin-bottom: 0.25rem;">${user.name}</h2>
+                    <p style="opacity: 0.9; margin: 0;">${user.email}</p>
+                    <span class="badge" style="margin-top: 0.5rem; background: rgba(255,255,255,0.3);">${user.role}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card">
+                <h3 class="card-title">Account Details</h3>
+                <div style="display: grid; gap: 1rem; margin-top: 1rem;">
+                  <div><strong>User ID:</strong> ${user.id}</div>
+                  <div><strong>Member Since:</strong> ${Utils.formatDate(user.joinDate)}</div>
+                  <div><strong>Borrow Limit:</strong> ${CONFIG.MAX_BORROW_LIMIT[user.role]} items</div>
+                  <div><strong>Loan Period:</strong> ${CONFIG.BORROW_DURATION[user.role]} days</div>
+                  <div><strong>Active Loans:</strong> ${activeLoans.length}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card" style="margin-top: 2rem;">
+              <h3 class="card-title">Currently Borrowed</h3>
+              ${activeLoans.length === 0 ?
+            '<p class="text-muted">No active loans</p>' :
+            `<div class="grid grid-cols-3" style="margin-top: 1rem;">
+                  ${activeLoans.map(t => `
+                    <div class="card">
+                      <h4 style="font-size: 1rem; margin-bottom: 0.5rem;">${t.itemTitle}</h4>
+                      <p class="text-sm text-muted">${t.itemType}</p>
+                      <div style="margin-top: 0.5rem;">
+                        <div class="text-xs text-muted">Due: ${Utils.formatDate(t.dueDate)}</div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>`
+          }
+            </div>
+          </div>
+        `;
+      },
+
+      renderAdminPage() {
+        if (!State.isLibrarian()) {
+          Router.navigate('dashboard');
+          return;
+        }
+
+        const stats = State.getStatistics();
+
+        const content = document.getElementById('mainContent');
+        content.innerHTML = `
+          <div class="container animate-fadeInUp">
+            <div class="page-header">
+              <h1 class="page-title">Admin Panel</h1>
+              <p class="page-description">Manage library operations</p>
+            </div>
+            
+            <div class="dashboard-stats">
+              <div class="stat-card"><div class="stat-value">${stats.totalUsers}</div><div class="stat-label">Total Users</div></div>
+              <div class="stat-card"><div class="stat-value">${stats.totalItems}</div><div class="stat-label">Total Items</div></div>
+              <div class="stat-card"><div class="stat-value">${stats.totalTransactions}</div><div class="stat-label">Transactions</div></div>
+              <div class="stat-card"><div class="stat-value">${stats.overdueTransactions}</div><div class="stat-label">Overdue Items</div></div>
+            </div>
+            
+            <div class="grid grid-cols-2" style="margin-top: 2rem;">
+              <div class="card">
+                <h3 class="card-title">Quick Actions</h3>
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                  <button class="btn btn-primary" onclick="App.showAddItemForm()">➕ Add New Item</button>
+                  <button class="btn btn-secondary" onclick="App.showOverdueReport()">⚠️ View Overdue Report</button>
+                  <button class="btn btn-accent" onclick="App.showAllUsers()">👥 View All Users</button>
+                </div>
+              </div>
+              
+              <div class="card card-gradient">
+                <h3 class="card-title">System Status</h3>
+                <div style="margin-top: 1rem;">
+                  <p>✅ System operational</p>
+                  <p>📚 ${stats.availableItems} items available</p>
+                  <p>👥 ${stats.totalUsers} registered users</p>
+                </div>
+              </div>
+            </div>
+            
+            <div id="adminContent" style="margin-top: 2rem;"></div>
+          </div>
+        `;
+      },
+
+      showAddItemForm() {
+        const adminContent = document.getElementById('adminContent');
+        adminContent.innerHTML = `
+          <div class="card animate-scaleIn">
+            <h3 class="card-title">Add New Item</h3>
+            <form id="addItemForm" style="margin-top: 1rem;">
+              <div class="grid grid-cols-2" style="gap: 1rem;">
+                <div class="form-group">
+                  <label class="form-label">Item Type</label>
+                  <select id="itemType" class="form-select" required>
+                    <option value="Book">Book</option>
+                    <option value="Magazine">Magazine</option>
+                    <option value="Journal">Journal</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Title</label>
+                  <input type="text" id="itemTitle" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Publisher</label>
+                  <input type="text" id="itemPublisher" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Year</label>
+                  <input type="number" id="itemYear" class="form-input" required>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Add Item</button>
+            </form>
+          </div>
+        `;
+
+        document.getElementById('addItemForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const itemData = {
+            type: document.getElementById('itemType').value,
+            title: document.getElementById('itemTitle').value,
+            publisher: document.getElementById('itemPublisher').value,
+            year: parseInt(document.getElementById('itemYear').value)
+          };
+
+          try {
+            await API.addItem(itemData);
+            Utils.showToast('Item added successfully!', 'success');
+            document.getElementById('adminContent').innerHTML = '';
+          } catch (error) {
+            Utils.showToast(error.message, 'error');
+          }
+        });
+      },
+
+      async showOverdueReport() {
+        const report = await API.getOverdueReport();
+        const adminContent = document.getElementById('adminContent');
+        adminContent.innerHTML = `
+          <div class="card animate-scaleIn">
+            <h3 class="card-title">Overdue Items Report (${report.length})</h3>
+            ${report.length === 0 ?
+            '<p class="text-muted">No overdue items</p>' :
+            `<div class="table-container" style="margin-top: 1rem;">
+                <table class="table">
+                  <thead><tr><th>User</th><th>Item</th><th>Due Date</th><th>Days Overdue</th><th>Fine</th></tr></thead>
+                  <tbody>
+                    ${report.map(t => `
+                      <tr>
+                        <td>${State.getUserById(t.userId)?.name}</td>
+                        <td>${t.itemTitle}</td>
+                        <td>${Utils.formatDate(t.dueDate)}</td>
+                        <td>${t.daysOverdue}</td>
+                        <td>${Utils.formatCurrency(t.currentFine)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>`
+          }
+          </div>
+        `;
+      },
+
+      async showAllUsers() {
+        const users = await API.getAllUsers();
+        const adminContent = document.getElementById('adminContent');
+        adminContent.innerHTML = `
+          <div class="card animate-scaleIn">
+            <h3 class="card-title">All Users (${users.length})</h3>
+            <div class="grid grid-cols-3" style="margin-top: 1rem;">
+              ${users.map(u => `
+                <div class="card">
+                  <div class="flex items-center gap-3">
+                    <div class="user-avatar" style="width: 48px; height: 48px;">
+                      ${Utils.getInitials(u.name)}
+                    </div>
+                    <div>
+                      <div class="font-semibold">${u.name}</div>
+                      <div class="text-sm text-muted">${u.role}</div>
+                      <div class="text-xs text-muted">${u.id}</div>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+    };
+
+    // Initialize app when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => App.init());
+    } else {
+      App.init();
+    }
+  </script>
+</body>
+
+</html>
