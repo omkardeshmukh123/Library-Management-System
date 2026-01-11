@@ -187,28 +187,6 @@ Library (Singleton)
 └── tracks → Transaction history
 ```
 
-## 🎯 Interview Discussion Points
-
-1. **Why use abstract base classes?**
-   - Enforces common interface across derived classes
-   - Enables polymorphism for uniform handling
-   - Prevents instantiation of incomplete types
-
-2. **Singleton Pattern choice?**
-   - Single source of truth for library data
-   - Prevents data inconsistency
-   - Global access point for library operations
-
-3. **Smart pointers vs raw pointers?**
-   - Automatic memory management
-   - Exception safety
-   - Clear ownership semantics
-
-4. **STL containers choice?**
-   - `map` for O(log n) lookups by ID
-   - `vector` for efficient sequential access
-   - Type-safe, well-tested implementations
-
 ## 🔮 Future Enhancements
 
 - Database integration (SQLite/MySQL)
@@ -217,11 +195,7 @@ Library (Singleton)
 - Advanced search with filters
 - Email notifications for due dates
 - Book reservation system
-- Digital library integration
-
-## 👨‍💻 Author
-
-Created as a resume-worthy C++ project demonstrating OOP principles and modern C++ best practices.
+- Digital library integration.
 
 ## 📝 License
 
